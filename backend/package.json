@@ -1,0 +1,26 @@
+{
+  "name": "video-call-app-backend",
+  "version": "1.0.0",
+  "description": "Backend for video call application using Express and Socket.IO",
+  "main": "dist/server.js",
+  "scripts": {
+    "start": "node dist/server.js",
+    "build": "tsc",
+    "dev": "ts-node-dev --respawn --transpile-only src/server.ts"
+  },
+  "dependencies": {
+    "express": "^4.17.1",
+    "socket.io": "^4.0.0",
+    "uuid": "^11.1.0"
+  },
+  "devDependencies": {
+    "@types/express": "^4.17.14",
+    "@types/node": "^20.0.0",
+    "@types/socket.io": "^3.0.2",
+    "ts-node": "^10.0.0",
+    "ts-node-dev": "^2.0.0",
+    "typescript": "^5.8.2"
+  },
+  "author": "Your Name",
+  "license": "MIT"
+}
