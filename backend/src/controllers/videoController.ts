@@ -2,7 +2,7 @@ import { Server, Socket } from "socket.io";
 
 class VideoController {
     private io: Server;
-    private activeCalls: Record<string, string[]>; // Map roomId to an array of socket IDs
+    private activeCalls: Record<string, string[]>; 
 
     constructor(io: Server) {
         this.io = io;
@@ -46,21 +46,29 @@ class VideoController {
         socket.on("joinCall", (roomId: string) => this.joinCall(socket, roomId));
         socket.on("leaveCall", (roomId: string) => this.leaveCall(socket, roomId));
         socket.on("disconnect", () => this.handleDisconnect(socket));
-    
-        // Handle WebRTC Signaling
+
+        // WebRTC Signaling
         socket.on("offer", ({ roomId, offer }) => {
             socket.to(roomId).emit("offer", { sender: socket.id, offer });
         });
-    
+
         socket.on("answer", ({ roomId, answer }) => {
             socket.to(roomId).emit("answer", { sender: socket.id, answer });
         });
-    
+
         socket.on("ice-candidate", ({ roomId, candidate }) => {
             socket.to(roomId).emit("ice-candidate", { sender: socket.id, candidate });
         });
+
+        // Stream handling
+        socket.on("startStream", ({ roomId }) => {
+            socket.to(roomId).emit("streamStarted", { sender: socket.id });
+        });
+
+        socket.on("stopStream", ({ roomId }) => {
+            socket.to(roomId).emit("streamStopped", { sender: socket.id });
+        });
     }
-    
 
     handleDisconnect(socket: Socket): void {
         for (const roomId in this.activeCalls) {

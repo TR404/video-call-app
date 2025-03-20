@@ -3,20 +3,36 @@ import http from "http";
 import { Server, Socket } from "socket.io";
 import { v4 as uuidv4 } from "uuid";
 import cors from "cors";
+import VideoController from "./controllers/videoController";
 
 const app = express();
-app.use(cors({ origin: ["http://localhost:3000", "https://video-call-app-n4my.vercel.app", "https://video-call-app-frontend.netlify.app"], credentials: true }));
+app.use(
+    cors({
+        origin: [
+            "http://localhost:3000",
+            "https://video-call-app-n4my.vercel.app",
+            "https://video-call-app-frontend.netlify.app"
+        ],
+        credentials: true
+    })
+);
 app.use(express.json());
 
 const server = http.createServer(app);
 const io = new Server(server, {
     cors: {
-        origin: ["http://localhost:3000", "https://video-call-app-n4my.vercel.app", "https://video-call-app-frontend.netlify.app"],
+        origin: [
+            "http://localhost:3000",
+            "https://video-call-app-n4my.vercel.app",
+            "https://video-call-app-frontend.netlify.app"
+        ],
         methods: ["GET", "POST"],
         credentials: true
     },
     transports: ["websocket", "polling"]
 });
+
+const videoController = new VideoController(io);
 
 const rooms: Record<string, string[]> = {}; 
 
@@ -27,51 +43,8 @@ app.post("/create-room", (req: Request, res: Response) => {
 });
 
 io.on("connection", (socket: Socket) => {
-    console.log(`A user connected: ${socket.id}`);
-
-    socket.on("joinCall", (roomId: string) => {
-        if (!roomId) return;
-
-        if (!rooms[roomId]) {
-            rooms[roomId] = [];
-        }
-
-        if (!rooms[roomId].includes(socket.id)) {
-            rooms[roomId].push(socket.id);
-            socket.join(roomId);
-        }
-
-        socket.to(roomId).emit("user-joined", socket.id);
-        io.to(socket.id).emit("existing-users", rooms[roomId].filter(id => id !== socket.id));
-    });
-
-    socket.on("offer", ({ offer, roomId, receiver, sender }) => {
-        console.log(`Offer from ${sender} to ${receiver} in ${roomId}`);
-        io.to(receiver).emit("offer", { offer, sender });
-    });
-
-    socket.on("answer", ({ answer, sender, receiver }) => {
-        console.log(`Answer from ${sender} to ${receiver}`);
-        io.to(receiver).emit("answer", { answer });
-    });
-
-    socket.on("ice-candidate", ({ candidate, roomId, sender }) => {
-        console.log(`ICE Candidate from ${sender} in ${roomId}`);
-        socket.to(roomId).emit("ice-candidate", { candidate, sender });
-    });
-
-    socket.on("disconnect", () => {
-        console.log(`User ${socket.id} disconnected`);
-        for (const roomId in rooms) {
-            rooms[roomId] = rooms[roomId].filter(id => id !== socket.id);
-            socket.to(roomId).emit("user-left", socket.id);
-
-            if (rooms[roomId].length === 0) {
-                delete rooms[roomId];
-                console.log(`Room ${roomId} deleted`);
-            }
-        }
-    });
+    console.log(`User connected: ${socket.id}`);
+    videoController.handleConnection(socket);
 });
 
 const PORT = process.env.PORT || 5000;

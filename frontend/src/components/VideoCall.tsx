@@ -18,20 +18,25 @@ const VideoCall: React.FC<VideoCallProps> = ({ endCall }) => {
     const remoteVideoRef = useRef<HTMLVideoElement>(null);
     const peerConnection = useRef<RTCPeerConnection | null>(null);
 
+    // Set up socket listeners
     useEffect(() => {
-        socket.on("offer", async ({ offer, roomId }) => {
+        socket.on("offer", async ({ offer, sender }) => {
+            console.log(`Received offer from ${sender}`);
+
             if (!peerConnection.current) return;
 
-            await peerConnection.current.setRemoteDescription(new RTCSessionDescription(offer));
-            const answer = await peerConnection.current.createAnswer();
-            await peerConnection.current.setLocalDescription(answer);
+            if (!peerConnection.current.remoteDescription) {
+                await peerConnection.current.setRemoteDescription(new RTCSessionDescription(offer));
+                const answer = await peerConnection.current.createAnswer();
+                await peerConnection.current.setLocalDescription(answer);
 
-            socket.emit("answer", { answer, roomId });
+                socket.emit("answer", { answer, sender, receiver: socket.id });
+            }
         });
 
         socket.on("answer", async ({ answer }) => {
-            if (!peerConnection.current) return;
-            if (!peerConnection.current.remoteDescription) {
+            console.log("Received answer");
+            if (peerConnection.current && !peerConnection.current.remoteDescription) {
                 await peerConnection.current.setRemoteDescription(new RTCSessionDescription(answer));
             }
         });
@@ -45,23 +50,43 @@ const VideoCall: React.FC<VideoCallProps> = ({ endCall }) => {
             }
         });
 
+        // Listen for existing users in the room
+        socket.on("existing-users", async (users: string[]) => {
+            console.log("Existing users in room:", users);
+            await startCall();
+
+            users.forEach(async (userId) => {
+                if (!peerConnection.current) return;
+                const offer = await peerConnection.current.createOffer();
+                await peerConnection.current.setLocalDescription(offer);
+                socket.emit("offer", { offer, receiver: userId, sender: socket.id });
+            });
+        });
+
         return () => {
+            socket.off("offer");
+            socket.off("answer");
+            socket.off("ice-candidate");
+            socket.off("existing-users");
             socket.disconnect();
         };
     }, []);
 
+    // Attach local stream to video element
     useEffect(() => {
         if (localStream && localVideoRef.current) {
             localVideoRef.current.srcObject = localStream;
         }
     }, [localStream]);
 
+    // Attach remote stream to video element
     useEffect(() => {
         if (remoteStream && remoteVideoRef.current) {
             remoteVideoRef.current.srcObject = remoteStream;
         }
     }, [remoteStream]);
 
+    // Create a new room
     const createRoom = async () => {
         const response = await fetch(`${baseUrl}/create-room`, { method: "POST" });
         const data = await response.json();
@@ -70,20 +95,19 @@ const VideoCall: React.FC<VideoCallProps> = ({ endCall }) => {
         await startCall();
     };
 
+    // Join an existing room
     const joinRoom = async () => {
         if (inputRoomId.trim() === "") {
             alert("Please enter a valid Room ID.");
             return;
         }
-    
+
         console.log("Joining room with ID:", inputRoomId);
         setRoomId(inputRoomId);
-        
         socket.emit("joinCall", inputRoomId);
-        await startCall();
     };
-    
 
+    // Start a video call
     const startCall = async () => {
         if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
             alert("Your browser does not support video calls.");
@@ -127,12 +151,21 @@ const VideoCall: React.FC<VideoCallProps> = ({ endCall }) => {
         }
     };
 
+    // End the call
     const handleEndCall = () => {
+        if (peerConnection.current) {
+            peerConnection.current.onicecandidate = null;
+            peerConnection.current.ontrack = null;
+            peerConnection.current.close();
+            peerConnection.current = null;
+        }
+
         localStream?.getTracks().forEach((track) => track.stop());
         remoteStream?.getTracks().forEach((track) => track.stop());
-        peerConnection.current?.close();
+
         setLocalStream(null);
         setRemoteStream(null);
+        setRoomId(null);
         endCall();
     };
 
