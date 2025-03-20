@@ -1,7 +1,7 @@
 import React, { useEffect, useRef, useState } from "react";
 import { io } from "socket.io-client";
 
-const baseUrl = "https://2203-122-161-50-46.ngrok-free.app";
+const baseUrl = "https://video-call-app-n4my.vercel.app";
 
 const socket = io(baseUrl);
 
