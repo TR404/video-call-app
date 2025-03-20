@@ -1,7 +1,9 @@
 import React, { useEffect, useRef, useState } from "react";
 import { io } from "socket.io-client";
 
-const socket = io("http://localhost:5000");
+const baseUrl = "https://2203-122-161-50-46.ngrok-free.app";
+
+const socket = io(baseUrl);
 
 interface VideoCallProps {
     endCall: () => void;
@@ -61,7 +63,7 @@ const VideoCall: React.FC<VideoCallProps> = ({ endCall }) => {
     }, [remoteStream]);
 
     const createRoom = async () => {
-        const response = await fetch("http://localhost:5000/create-room", { method: "POST" });
+        const response = await fetch(`${baseUrl}/create-room`, { method: "POST" });
         const data = await response.json();
         setRoomId(data.roomId);
         socket.emit("joinCall", data.roomId);

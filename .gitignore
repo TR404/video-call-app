@@ -30,7 +30,7 @@ frontend/build/
 .idea/
 *.swp
 *.swo
-.zip
+**/build.zip
 
 # MacOS
 .DS_Store
