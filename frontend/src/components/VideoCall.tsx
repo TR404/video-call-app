@@ -1,7 +1,7 @@
 import React, { useEffect, useRef, useState } from "react";
 import { io } from "socket.io-client";
 
-const socket = io("https://724c19070f3999.lhr.life");
+const socket = io("http://localhost:5000");
 
 interface VideoCallProps {
     endCall: () => void;

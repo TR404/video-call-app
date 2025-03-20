@@ -30,9 +30,13 @@ frontend/build/
 .idea/
 *.swp
 *.swo
+.zip
 
 # MacOS
 .DS_Store
 
 # Windows
 Thumbs.db
+
+# Ignore package-lock.json files
+**/package-lock.json
